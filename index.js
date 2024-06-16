@@ -1,14 +1,23 @@
-import fetch from 'node-fetch';
-import fs from 'fs';
-import { agent } from './agent.js';
-import { imgSource, limit, startId, endId, distance, isDistence, continuteLastTime } from './data.js';
+import fetch from "node-fetch";
+import fs from "fs";
+import { agent } from "./agent.js";
+import {
+  imgSource,
+  limit,
+  startId,
+  endId,
+  distance,
+  isDistence,
+  continuteLastTime,
+} from "./data.js";
+import { ThreadPool } from "./threadPool.js";
 
 (async function () {
-
   let start;
   let end;
-  if (continuteLastTime && fs.existsSync('./log.json')) {
-    start = JSON.parse(fs.readFileSync('./log.json', 'utf-8')).lastDownLoadId + 1;
+  if (continuteLastTime && fs.existsSync("./log.json")) {
+    start =
+      JSON.parse(fs.readFileSync("./log.json", "utf-8")).lastDownLoadId + 1;
     end = start + distance - 1;
   } else if (isDistence) {
     start = startId;
@@ -22,8 +31,9 @@ import { imgSource, limit, startId, endId, distance, isDistence, continuteLastTi
 
   let currentDir = await getCurrentDir();
   let i = start;
-  let finishId = 0;       // 能成功fetch到的才会变更，即下载成功的id
+  let finishId = 0; // 能成功fetch到的才会变更，即下载成功的id
 
+  const threadPool = new ThreadPool();
   try {
     for (; i <= end; i++) {
       if (fs.readdirSync(`./img/${currentDir}`).length >= limit) {
@@ -33,8 +43,8 @@ import { imgSource, limit, startId, endId, distance, isDistence, continuteLastTi
 
       const res = await fetch(`${imgSource}/post.json?tags=id:${i}`, { agent });
       const texts = await res.text();
-      const img = JSON.parse(texts).filter(img => img.file_url)[0];                      // 将字符串转换为JSON形式的对象，这里会转成数组。
-    
+      const img = JSON.parse(texts).filter((img) => img.file_url)[0]; // 将字符串转换为JSON形式的对象，这里会转成数组。
+
       if (!img) {
         continue;
       }
@@ -43,13 +53,14 @@ import { imgSource, limit, startId, endId, distance, isDistence, continuteLastTi
 
       if (imgRes) {
         finishId = i;
-      }
 
-      const filePath = `./img/${currentDir}/${img.id}.${img.file_ext}`;
+        const filePath = `./img/${currentDir}/${img.id}.${img.file_ext}`;
+        const imageData = await imgRes.arrayBuffer();
 
-      if (!fs.existsSync(filePath)) {
-        const writeStream = fs.createWriteStream(filePath);
-        imgRes.body.pipe(writeStream);
+        threadPool.excuteTask({
+          imageData,
+          filePath,
+        });
       }
     }
 
@@ -58,17 +69,19 @@ import { imgSource, limit, startId, endId, distance, isDistence, continuteLastTi
     console.log(e);
     makeRecord(i - 1);
   }
-
 })();
 
 async function mkdirImg() {
-  if (!fs.existsSync('./img')) {
-    fs.mkdirSync('./img');
+  if (!fs.existsSync("./img")) {
+    fs.mkdirSync("./img");
   }
 }
 
 async function getCurrentDir() {
-  const dirs = fs.readdirSync('./img').map(Number).sort((a, b) => a - b);
+  const dirs = fs
+    .readdirSync("./img")
+    .map(Number)
+    .sort((a, b) => a - b);
 
   if (dirs.length === 0) {
     fs.mkdirSync(`./img/${1}`);
@@ -85,7 +98,10 @@ async function getCurrentDir() {
 }
 
 async function makeRecord(id) {
-  fs.writeFileSync('./log.json', `{
+  fs.writeFileSync(
+    "./log.json",
+    `{
     "lastDownLoadId": ${id}
-  }`.trim())
+  }`.trim()
+  );
 }
