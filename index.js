@@ -12,7 +12,10 @@ import {
 } from "./data.js";
 import { ThreadPool } from "./threadPool.js";
 
-(async function () {
+let errorCount = 0;
+let errorId = 0;
+
+async function main() {
   let start;
   let end;
   if (continuteLastTime && fs.existsSync("./log.json")) {
@@ -68,8 +71,22 @@ import { ThreadPool } from "./threadPool.js";
   } catch (e) {
     console.log(e);
     makeRecord(i - 1);
+
+    if (errorId === i) {
+      errorCount++;
+    } else {
+      errorCount = 1;
+    }
+
+    errorId = i;
+
+    if (errorCount <= 5) {
+      main();
+    }
   }
-})();
+}
+
+main();
 
 async function mkdirImg() {
   if (!fs.existsSync("./img")) {
