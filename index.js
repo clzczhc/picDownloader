@@ -14,6 +14,16 @@ import { ThreadPool } from "./threadPool.js";
 
 let errorCount = 0;
 let errorId = 0;
+let finishId = 0; // 能成功fetch到的才会变更，即下载成功的id
+
+process.on("SIGINT", () => {
+  console.log("程序结束");
+
+  makeRecord(finishId - 1);
+
+  // 退出程序
+  process.exit();
+});
 
 async function main() {
   let start;
@@ -34,7 +44,6 @@ async function main() {
 
   let currentDir = await getCurrentDir();
   let i = start;
-  let finishId = 0; // 能成功fetch到的才会变更，即下载成功的id
 
   const threadPool = new ThreadPool();
   try {
@@ -82,6 +91,8 @@ async function main() {
 
     if (errorCount <= 5) {
       main();
+    } else {
+      process.exit();
     }
   }
 }
