@@ -55,7 +55,9 @@ async function main() {
 
       const res = await fetch(`${imgSource}/post.json?tags=id:${i}`, { agent });
       const texts = await res.text();
-      const img = JSON.parse(texts).filter((img) => img.file_url)[0]; // 将字符串转换为JSON形式的对象，这里会转成数组。
+      const img = JSON.parse(texts).filter(
+        (img) => img.file_url && !img.tags.includes("partial_scan")
+      )[0]; // 将字符串转换为JSON形式的对象，这里会转成数组。
 
       if (!img) {
         continue;
