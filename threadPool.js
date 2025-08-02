@@ -15,14 +15,8 @@ export class ThreadPool {
       const thread = new Worker("./worker.js");
       this.threads.push(thread);
 
-      thread.on("message", (msg) => {
-        if (msg === "done") {
-          thread.terminate();
-          return;
-        }
-
+      thread.on("message", () => {
         const excuteNext = this.pendingTasks.shift();
-
         if (excuteNext) {
           excuteNext(thread);
         } else {
