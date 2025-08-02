@@ -17,6 +17,7 @@ export class ThreadPool {
 
       thread.on("message", (msg) => {
         if (msg === "done") {
+          this.threads.splice(this.threads.indexOf(thread), 1);
           thread.terminate();
           return;
         }
