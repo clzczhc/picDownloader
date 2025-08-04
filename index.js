@@ -1,6 +1,12 @@
-import fetch from "node-fetch";
+/*
+ * @Author: clz chenzaihong@shimo.im
+ * @Date: 2025-08-04 14:45:33
+ * @LastEditors: clz chenzaihong@shimo.im
+ * @LastEditTime: 2025-08-04 14:54:57
+ * @FilePath: /picDownloader/index.js
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 import fs from "fs";
-import { agent } from "./agent.js";
 import {
   imgSource,
   limit,
@@ -12,14 +18,15 @@ import {
 } from "./data.js";
 import { ThreadPool } from "./threadPool.js";
 
-let errorCount = 0;
-let errorId = 0;
-let finishId = 0; // 能成功fetch到的才会变更，即下载成功的id
+let threadPool;
 
-process.on("SIGINT", () => {
+process.on("SIGINT", async () => {
   console.log("程序结束");
 
-  makeRecord(finishId - 1);
+  // 等待线程池关闭
+  if (threadPool) {
+    await threadPool.shutdown();
+  }
 
   // 退出程序
   process.exit();
@@ -28,6 +35,7 @@ process.on("SIGINT", () => {
 async function main() {
   let start;
   let end;
+
   if (continuteLastTime && fs.existsSync("./log.json")) {
     start =
       JSON.parse(fs.readFileSync("./log.json", "utf-8")).lastDownLoadId + 1;
@@ -40,98 +48,33 @@ async function main() {
     end = endId;
   }
 
-  await mkdirImg();
+  console.log(`开始下载任务: ID ${start} 到 ${end}`);
 
-  let currentDir = await getCurrentDir();
-  let i = start;
+  // 创建线程池，每个线程负责10张图片
+  threadPool = new ThreadPool(4, 10);
 
-  const threadPool = new ThreadPool();
+  // 设置任务范围
+  threadPool.setTaskRange(start, end);
+
+  // 设置批次完成回调
+  threadPool.setBatchCompleteCallback((lastDownloadId) => {
+    console.log(`批次完成，最后下载ID: ${lastDownloadId}`);
+  });
+
   try {
-    for (; i <= end; i++) {
-      if (fs.readdirSync(`./img/${currentDir}`).length >= limit) {
-        currentDir += 1;
-        fs.mkdirSync(`./img/${currentDir}`);
-      }
+    // 启动线程池
+    threadPool.start();
 
-      const res = await fetch(`${imgSource}/post.json?tags=id:${i}`, { agent });
-      const texts = await res.text();
-      const img = JSON.parse(texts).filter(
-        (img) => img.file_url && !img.tags.includes("partial_scan")
-      )[0]; // 将字符串转换为JSON形式的对象，这里会转成数组。
+    // 等待所有任务完成
+    await threadPool.waitForAllTasks();
 
-      if (!img) {
-        continue;
-      }
-
-      const imgRes = await fetch(img.file_url, { agent });
-
-      if (imgRes) {
-        finishId = i;
-
-        const filePath = `./img/${currentDir}/${img.id}.${img.file_ext}`;
-        const imageData = await imgRes.arrayBuffer();
-
-        threadPool.excuteTask({
-          imageData,
-          filePath,
-        });
-      }
-    }
-
-    makeRecord(end);
+    console.log("所有下载任务完成");
   } catch (e) {
-    console.log(e);
-    makeRecord(i - 1);
-
-    if (errorId === i) {
-      errorCount++;
-    } else {
-      errorCount = 1;
-    }
-
-    errorId = i;
-
-    if (errorCount <= 5) {
-      main();
-    } else {
-      process.exit();
-    }
+    console.log("下载过程中出错:", e);
+  } finally {
+    // 关闭线程池
+    await threadPool.shutdown();
   }
 }
 
 main();
-
-async function mkdirImg() {
-  if (!fs.existsSync("./img")) {
-    fs.mkdirSync("./img");
-  }
-}
-
-async function getCurrentDir() {
-  const dirs = fs
-    .readdirSync("./img")
-    .map(Number)
-    .sort((a, b) => a - b);
-
-  if (dirs.length === 0) {
-    fs.mkdirSync(`./img/${1}`);
-    return 1;
-  } else {
-    const finalDir = dirs[dirs.length - 1];
-    if (fs.readdirSync(`./img/${finalDir}`).length < limit) {
-      return finalDir;
-    } else {
-      fs.mkdirSync(`./img/${finalDir + 1}`);
-      return finalDir + 1;
-    }
-  }
-}
-
-async function makeRecord(id) {
-  fs.writeFileSync(
-    "./log.json",
-    `{
-    "lastDownLoadId": ${id}
-  }`.trim()
-  );
-}
