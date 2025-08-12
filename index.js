@@ -8,8 +8,6 @@
  */
 import fs from "fs";
 import {
-  imgSource,
-  limit,
   startId,
   endId,
   distance,
@@ -19,18 +17,6 @@ import {
 import { ThreadPool } from "./threadPool.js";
 
 let threadPool;
-
-process.on("SIGINT", async () => {
-  console.log("程序结束");
-
-  // 等待线程池关闭
-  if (threadPool) {
-    await threadPool.shutdown();
-  }
-
-  // 退出程序
-  process.exit();
-});
 
 async function main() {
   let start;

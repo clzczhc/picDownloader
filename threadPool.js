@@ -33,8 +33,7 @@ export class ThreadPool {
 
   // 创建新的worker
   createWorker() {
-    // 使用模拟worker进行测试
-    const workerPath = path.join(__dirname, "mockWorker.js");
+    const workerPath = path.join(__dirname, "downloadWorker.js");
     const worker = new Worker(workerPath);
 
     // 设置worker消息处理
@@ -195,9 +194,6 @@ export class ThreadPool {
 
   // 关闭线程池
   async shutdown() {
-    // 等待所有任务完成
-    await this.waitForAllTasks();
-
     // 终止所有worker
     for (const worker of this.workers) {
       worker.terminate();

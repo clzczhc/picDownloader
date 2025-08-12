@@ -1,11 +1,7 @@
 import fetch from "node-fetch";
 import fs from "fs";
-import path from "path";
 import { parentPort } from "worker_threads";
-
-// 配置参数
-const imgSource = "https://safebooru.org";
-const limit = 1000; // 每个文件夹最大文件数
+import { imgSource, limit } from "./data.js";
 
 // 创建图片目录
 async function mkdirImg() {
