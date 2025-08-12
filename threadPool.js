@@ -6,6 +6,8 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+let finishCount = 0;
+
 // 线程池管理器
 export class ThreadPool {
   constructor(maxThreads = 4, batchSize = 10) {
@@ -61,10 +63,14 @@ export class ThreadPool {
   // 处理worker消息
   handleWorkerMessage(worker, message) {
     if (message.type === "batchComplete") {
+      finishCount++;
+      if (finishCount % this.maxThreads === 0) {
+        // 记录进度
+        makeRecord(message.lastDownloadId);
+      }
+
       // 批次完成
-      console.log(
-        `Worker ${worker.threadId} 完成批次: ${message.startId} - ${message.endId}`
-      );
+      console.log(`完成批次: ${message.startId} - ${message.endId}`);
 
       // 调用批次完成回调
       if (this.onBatchComplete) {
@@ -203,4 +209,14 @@ export class ThreadPool {
     this.idleWorkers = [];
     this.busyWorkers = [];
   }
+}
+
+// 记录下载进度
+async function makeRecord(id) {
+  fs.writeFileSync(
+    "./log.json",
+    `{
+    "lastDownLoadId": ${id}
+  }`.trim()
+  );
 }

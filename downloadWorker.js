@@ -2,6 +2,7 @@ import fetch from "node-fetch";
 import fs from "fs";
 import { parentPort } from "worker_threads";
 import { imgSource, limit } from "./data.js";
+import { agent } from "./agent.js";
 
 // 创建图片目录
 async function mkdirImg() {
@@ -50,16 +51,6 @@ async function getCurrentDir() {
   }
 }
 
-// 记录下载进度
-async function makeRecord(id) {
-  fs.writeFileSync(
-    "./log.json",
-    `{
-    "lastDownLoadId": ${id}
-  }`.trim()
-  );
-}
-
 // 下载单张图片
 async function downloadImage(id, currentDir) {
   try {
@@ -76,7 +67,7 @@ async function downloadImage(id, currentDir) {
     }
 
     // 获取帖子信息
-    const res = await fetch(`${imgSource}/post.json?tags=id:${id}`);
+    const res = await fetch(`${imgSource}/post.json?tags=id:${id}`, { agent });
 
     if (!res.ok) {
       console.error(`获取帖子信息失败 ${id}: HTTP ${res.status}`);
@@ -102,7 +93,7 @@ async function downloadImage(id, currentDir) {
     }
 
     // 下载图片
-    const imgRes = await fetch(img.file_url);
+    const imgRes = await fetch(img.file_url, { agent });
     if (!imgRes.ok) {
       console.error(`下载图片失败 ${id}: HTTP ${imgRes.status}`);
       return null;
@@ -146,9 +137,6 @@ async function processBatch(startId, endId) {
   console.log(
     `Worker ${process.pid} 完成批次: ${startId} - ${endId}, 最后下载ID: ${lastDownloadId}`
   );
-
-  // 记录进度
-  makeRecord(lastDownloadId);
 
   // 通知主线程批次完成
   parentPort.postMessage({
