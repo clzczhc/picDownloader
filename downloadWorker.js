@@ -52,7 +52,7 @@ async function getCurrentDir() {
 }
 
 // 下载单张图片
-async function downloadImage(id, currentDir) {
+async function downloadImage(id, currentDir, restartCount = 0) {
   try {
     // 检查目录是否需要更新
     if (fs.readdirSync(`./img/${currentDir}`).length >= limit) {
@@ -111,6 +111,15 @@ async function downloadImage(id, currentDir) {
     return id;
   } catch (error) {
     console.error(`下载图片 ${id} 失败:`, error.message);
+
+    restartCount++;
+
+    if (restartCount <= 10) {
+      return downloadImage(id, currentDir, restartCount);
+    } else {
+      process.abort();
+    }
+
     return null;
   }
 }

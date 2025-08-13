@@ -37,7 +37,7 @@ async function main() {
   console.log(`开始下载任务: ID ${start} 到 ${end}`);
 
   // 创建线程池，每个线程负责10张图片
-  threadPool = new ThreadPool(4, 10);
+  threadPool = new ThreadPool(20, 10);
 
   // 设置任务范围
   threadPool.setTaskRange(start, end);
