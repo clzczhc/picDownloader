@@ -212,7 +212,7 @@ export class ThreadPool {
 }
 
 // 记录下载进度
-async function makeRecord(id) {
+export async function makeRecord(id) {
   fs.writeFileSync(
     "./log.json",
     `{

@@ -14,7 +14,7 @@ import {
   isDistence,
   continuteLastTime,
 } from "./data.js";
-import { ThreadPool } from "./threadPool.js";
+import { ThreadPool, makeRecord } from "./threadPool.js";
 
 let threadPool;
 
@@ -53,6 +53,8 @@ async function main() {
 
     // 等待所有任务完成
     await threadPool.waitForAllTasks();
+
+    makeRecord(end);
 
     console.log("所有下载任务完成");
   } catch (e) {
